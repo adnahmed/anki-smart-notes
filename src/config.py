@@ -35,6 +35,7 @@ from .models import (
     ImageProviders,
     NoteTypeMap,
     OpenAIModels,
+    OllamaModels,
     PromptMap,
     TTSModels,
     TTSProviders,
@@ -65,6 +66,10 @@ class Config:
     chat_model: ChatModels
     chat_temperature: int
     chat_markdown_to_html: bool
+
+    # Ollama
+    ollama_endpoint: Optional[str]
+    ollama_model: Optional[OllamaModels]
 
     # TTS
     tts_provider: TTSProviders

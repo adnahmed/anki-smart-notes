@@ -3,6 +3,8 @@
   "chat_provider": "openai",
   "chat_model": "gpt-4o-mini",
   "chat_temperature": 1,
+  "ollama_endpoint": "http://localhost:11434",
+  "ollama_model": "llama3.2",
   "tts_provider": "google",
   "tts_voice": "en-US-Casual-K",
   "tts_model": "standard",

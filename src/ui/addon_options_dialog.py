@@ -78,6 +78,10 @@ class State(TypedDict):
     allow_empty_fields: bool
     debug: bool
 
+    # Ollama
+    ollama_endpoint: Optional[str]
+    ollama_model: Optional[str]
+
     # Legacy OpenAI
     openai_api_key: Optional[str]
     legacy_openai_model: str
@@ -451,6 +455,41 @@ class AddonOptionsDialog(QDialog):
             QSpacerItem(0, 24, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         )
         layout.addWidget(self.chat_options)
+
+        # Add Ollama settings section
+        layout.addItem(
+            QSpacerItem(0, 24, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        )
+        ollama_box = QGroupBox("🦙 Ollama (Local Models)")
+        ollama_form = default_form_layout()
+        ollama_box.setLayout(ollama_form)
+
+        self.ollama_endpoint_edit = ReactiveLineEdit(self.state, "ollama_endpoint")
+        self.ollama_endpoint_edit.setPlaceholderText("http://localhost:11434")
+        self.ollama_endpoint_edit.setMinimumWidth(400)
+        self.ollama_endpoint_edit.on_change.connect(
+            lambda text: self.state.update({"ollama_endpoint": text})
+        )
+        self.ollama_endpoint_edit.on_change.connect(
+            lambda _: self.chat_options.refresh_ollama_models()
+        )
+
+        ollama_form.addRow("Ollama Endpoint:", self.ollama_endpoint_edit)
+        ollama_info = QLabel(
+            "Configure the endpoint for your local Ollama instance. Make sure Ollama is running before using local models."
+        )
+        ollama_info.setFont(font_small)
+        ollama_form.addRow(ollama_info)
+
+        ollama_help = QLabel(
+            '<a href="https://ollama.com">Install Ollama</a> to use free, open-source models locally without subscription costs.'
+        )
+        ollama_help.setOpenExternalLinks(True)
+        ollama_help.setFont(font_small)
+        ollama_form.addRow(ollama_help)
+
+        layout.addWidget(ollama_box)
+
         return container
 
     def render_tts_tab(self) -> QWidget:
@@ -625,6 +664,11 @@ class AddonOptionsDialog(QDialog):
             show_message_box("Invalid OpenAI Host", "Please provide a valid URL.")
             return False
 
+        # Validate Ollama endpoint
+        if config.ollama_endpoint and not is_valid_url(config.ollama_endpoint):
+            show_message_box("Invalid Ollama Endpoint", "Please provide a valid URL.")
+            return False
+
         if (
             self.tts_options.state.s["tts_provider"] == "elevenLabs"
             and config.tts_provider != "elevenLabs"
@@ -679,6 +723,9 @@ class AddonOptionsDialog(QDialog):
             "openai_endpoint": config.openai_endpoint,
             "allow_empty_fields": config.allow_empty_fields,
             "debug": config.debug,
+            # Ollama
+            "ollama_endpoint": config.ollama_endpoint,
+            "ollama_model": config.ollama_model,
             # Legacy OpenAI
             "legacy_openai_model": config.legacy_openai_model,
             "legacy_openai_models": legacy_openai_chat_models,

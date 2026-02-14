@@ -22,7 +22,7 @@ from typing import cast
 from anki.decks import DeckId
 
 from . import env
-from .models import ChatModels, ChatProviders
+from .models import ChatModels, ChatProviders, OllamaModels
 
 SERVER_URL_PROD = "https://anki-smart-notes-server-production.up.railway.app"
 SERVER_URL_DEV = "http://localhost:3000"
@@ -35,11 +35,14 @@ MAX_RETRIES = 10
 CHAT_CLIENT_TIMEOUT_SEC = 60
 TTS_PROVIDER_TIMEOUT_SEC = 30
 IMAGE_PROVIDER_TIMEOUT_SEC = 45
+OLLAMA_TIMEOUT_SEC = 180
 
 STANDARD_BATCH_LIMIT = 10
 
 DEFAULT_CHAT_MODEL: ChatModels = "gpt-4o-mini"
 DEFAULT_CHAT_PROVIDER: ChatProviders = "openai"
+DEFAULT_OLLAMA_MODEL: OllamaModels = "llama3.2"
+OLLAMA_DEFAULT_ENDPOINT = "http://localhost:11434"
 
 DEFAULT_TEMPERATURE = 1
 

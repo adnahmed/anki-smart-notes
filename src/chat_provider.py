@@ -20,9 +20,15 @@ along with Smart Notes.  If not, see <https://www.gnu.org/licenses/>.
 from typing import cast
 
 from .api_client import api
-from .constants import CHAT_CLIENT_TIMEOUT_SEC, DEFAULT_TEMPERATURE
+from .config import config
+from .constants import (
+    CHAT_CLIENT_TIMEOUT_SEC,
+    DEFAULT_TEMPERATURE,
+    OLLAMA_DEFAULT_ENDPOINT,
+)
 from .logger import logger
-from .models import ChatModels, ChatProviders
+from .models import ChatModels, ChatProviders, OllamaModels
+from .ollama_client import OllamaClient
 
 
 class ChatProvider:
@@ -34,6 +40,24 @@ class ChatProvider:
         note_id: int,
         temperature: float = DEFAULT_TEMPERATURE,
     ) -> str:
+        # Route to local Ollama if provider is ollama
+        if provider == "ollama":
+            endpoint = config.ollama_endpoint or OLLAMA_DEFAULT_ENDPOINT
+            ollama_client = OllamaClient(endpoint=endpoint)
+
+            logger.debug(
+                f"Using Ollama provider with model {model} at endpoint {endpoint}"
+            )
+
+            msg = await ollama_client.async_get_chat_response(
+                prompt=prompt,
+                model=cast(OllamaModels, model),
+                temperature=temperature,
+            )
+
+            return msg
+
+        # Otherwise, use the cloud API server
         response = await api.get_api_response(
             path="chat",
             args={
