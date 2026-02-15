@@ -28,8 +28,8 @@ from ..models import (
     ChatModels,
     ChatProviders,
     OverridableChatOptionsDict,
-    overridable_chat_options,
     ollama_chat_models,
+    overridable_chat_options,
     provider_model_map,
 )
 from ..ollama_client import OllamaClient
@@ -196,7 +196,9 @@ class ChatOptions(QWidget):
 
         def on_success(models: list[str]) -> None:
             if not models:
-                logger.debug("Ollama model discovery returned no models; using fallback")
+                logger.debug(
+                    "Ollama model discovery returned no models; using fallback"
+                )
                 models = list(ollama_chat_models)
 
             self._ollama_models = models
@@ -217,7 +219,9 @@ class ChatOptions(QWidget):
             if self.state.s["chat_provider"] == "ollama":
                 current = self.state.s["chat_model"]
                 next_model = (
-                    current if current in self._ollama_models else self._ollama_models[0]
+                    current
+                    if current in self._ollama_models
+                    else self._ollama_models[0]
                 )
                 self.state.update(
                     {
@@ -226,4 +230,6 @@ class ChatOptions(QWidget):
                     }
                 )
 
-        run_async_in_background(fetch_models, on_success=on_success, on_failure=on_failure)
+        run_async_in_background(
+            fetch_models, on_success=on_success, on_failure=on_failure
+        )

@@ -17,9 +17,19 @@ You should have received a copy of the GNU General Public License
 along with Smart Notes.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .api_client import api
-from .constants import TTS_PROVIDER_TIMEOUT_SEC
+import asyncio
+from typing import cast
+
+import aiohttp
+
+from .config import config
+from .constants import (
+    OLLAMA_DEFAULT_ENDPOINT,
+    TTS_PROVIDER_TIMEOUT_SEC,
+)
+from .logger import logger
 from .models import TTSModels, TTSProviders
+from .ollama_client import OllamaClient
 
 
 class TTSProvider:
@@ -32,21 +42,71 @@ class TTSProvider:
         strip_html: bool,
         note_id: int = -1,
     ) -> bytes:
-        response = await api.get_api_response(
-            path="tts",
-            args={
-                "provider": provider,
-                "model": model,
-                "message": input,
-                "voice": voice,
-                "stripHtml": strip_html,
-            },
-            note_id=note_id,
-            timeout_sec=TTS_PROVIDER_TIMEOUT_SEC,
-        )
-        # TODO: write it directly to a temp cache file so they're not all going into memory
+        # Try local Ollama first if configured
+        if config.ollama_endpoint or provider == "ollama":
+            try:
+                endpoint = config.ollama_endpoint or OLLAMA_DEFAULT_ENDPOINT
+                ollama_client = OllamaClient(endpoint=endpoint)
+                logger.debug(f"Attempting Ollama TTS with model {model} at {endpoint}")
+                # Ollama's generate endpoint for TTS
+                response = await ollama_client.async_get_chat_response(
+                    prompt=f"Convert to speech: {input}",
+                    model=cast("str", model),
+                    temperature=1.0,
+                )
+                return response.encode() if isinstance(response, str) else response
+            except Exception as e:
+                logger.debug(f"Ollama TTS failed: {e}")
+                # Fall through to other providers
 
-        return response._body  # type: ignore
+        # Try OpenAI if provider is openai
+        if provider == "openai":
+            if not config.openai_api_key:
+                raise RuntimeError(
+                    "OpenAI TTS requires an API key. Please configure your OpenAI API key "
+                    "or use local Ollama for text-to-speech."
+                )
+
+            logger.debug(f"Using OpenAI TTS with model {model} and voice {voice}")
+            return await self._call_openai_tts(input, model, voice, strip_html)
+
+        # For other providers, inform user
+        raise RuntimeError(
+            f"TTS provider '{provider}' requires server backend which is no longer available. "
+            f"Options: Use local Ollama or configure your OpenAI API key for TTS. "
+            f"Support for {provider} requires credentials configuration."
+        )
+
+    async def _call_openai_tts(
+        self, input_text: str, model: TTSModels, voice: str, strip_html: bool
+    ) -> bytes:
+        """Call OpenAI TTS API with user-provided API key"""
+        try:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(
+                    "https://api.openai.com/v1/audio/speech",
+                    headers={"Authorization": f"Bearer {config.openai_api_key}"},
+                    json={
+                        "model": model,
+                        "input": input_text,
+                        "voice": voice,
+                    },
+                    timeout=aiohttp.ClientTimeout(total=TTS_PROVIDER_TIMEOUT_SEC),
+                ) as response,
+            ):
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise RuntimeError(
+                        f"OpenAI TTS error: {response.status} - {error_text}"
+                    )
+
+                return await response.read()
+
+        except asyncio.TimeoutError:
+            raise RuntimeError(
+                f"OpenAI TTS request timed out after {TTS_PROVIDER_TIMEOUT_SEC}s"
+            ) from None
 
 
 tts_provider = TTSProvider()

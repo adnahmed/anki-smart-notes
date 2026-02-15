@@ -226,7 +226,7 @@ def get_eleven_voices() -> list[TTSMeta]:
                 "model": model["model"],
                 "friendly_voice": f"{voice['name'].capitalize()} ({friendly_models[model['model']]})",
                 "gender": voice["gender"],
-                "price_tier": cast(PriceTiers, model["price_tier"]),
+                "price_tier": cast("PriceTiers", model["price_tier"]),
             }
 
             voices.append(ttsMeta)

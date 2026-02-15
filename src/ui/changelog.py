@@ -26,7 +26,6 @@ from ..logger import logger
 from ..sentry import pinger
 from ..tasks import run_async_in_background
 from ..utils import get_version, load_file
-from .v2_cta import V2CTA
 from .webview_dialog import WebviewDialog
 
 
@@ -97,19 +96,9 @@ def perform_update_check() -> None:
             return
 
         if is_new_major_or_minor_version(current_version, prior_version):
-            dialog: QDialog
-            # Check about showing special v2 changelog
-            # Only show the V2 CTA if the prior version was 1.x and the current version is 2.x
-            # Don't show it if no prior version bc shouldn't show it on first run
-            if (
-                get_versions(prior_version)[0] == 1
-                and get_versions(current_version)[0] == 2
-            ):
-                dialog = V2CTA(mw)
-                dialog.show()
-            else:
-                dialog = ChangeLogDialog(prior_version)
-                dialog.exec()
+            # Show the standard changelog dialog for all version upgrades
+            dialog = ChangeLogDialog(prior_version)
+            dialog.exec()
     except Exception as e:
         logger.error(f"Error checking for updates: {e}")
 

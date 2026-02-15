@@ -109,12 +109,14 @@ class OllamaClient:
             )
             raise Exception(
                 f"Ollama request timed out after {OLLAMA_TIMEOUT_SEC}s. Is Ollama running at {self.endpoint}?"
-            )
+            ) from None
         except aiohttp.ClientConnectorError as e:
-            logger.error(f"Connection error when calling Ollama at {self.endpoint}: {e}")
+            logger.error(
+                f"Connection error when calling Ollama at {self.endpoint}: {e}"
+            )
             raise Exception(
                 f"Could not connect to Ollama at {self.endpoint}. Is Ollama running? Error: {e}"
-            )
+            ) from e
         except Exception as e:
             if retry_count < MAX_RETRIES:
                 wait_time = (2**retry_count) * RETRY_BASE_SECONDS
@@ -173,12 +175,14 @@ class OllamaClient:
             )
             raise Exception(
                 f"Ollama tags request timed out after {OLLAMA_TIMEOUT_SEC}s. Is Ollama running at {self.endpoint}?"
-            )
+            ) from None
         except aiohttp.ClientConnectorError as e:
-            logger.error(f"Connection error when calling Ollama tags at {self.endpoint}: {e}")
+            logger.error(
+                f"Connection error when calling Ollama tags at {self.endpoint}: {e}"
+            )
             raise Exception(
                 f"Could not connect to Ollama at {self.endpoint}. Is Ollama running? Error: {e}"
-            )
+            ) from e
         except Exception as e:
             if retry_count < MAX_RETRIES:
                 wait_time = (2**retry_count) * RETRY_BASE_SECONDS

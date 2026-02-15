@@ -40,9 +40,7 @@ async def test_ollama_client_successful_response():
     mock_response.raise_for_status = MagicMock()
 
     with patch("aiohttp.ClientSession") as mock_session:
-        mock_session.return_value.__aenter__.return_value.post.return_value.__aenter__.return_value = (
-            mock_response
-        )
+        mock_session.return_value.__aenter__.return_value.post.return_value.__aenter__.return_value = mock_response
 
         result = await client.async_get_chat_response(
             prompt="Hello", model="llama3.2", temperature=1.0
@@ -57,8 +55,8 @@ async def test_ollama_client_connection_error():
     client = OllamaClient(endpoint="http://localhost:11434")
 
     with patch("aiohttp.ClientSession") as mock_session:
-        mock_session.return_value.__aenter__.return_value.post.side_effect = (
-            Exception("Connection refused")
+        mock_session.return_value.__aenter__.return_value.post.side_effect = Exception(
+            "Connection refused"
         )
 
         with pytest.raises(Exception, match="Max retries exceeded"):
@@ -97,9 +95,7 @@ async def test_ollama_client_model_list():
     mock_response.raise_for_status = MagicMock()
 
     with patch("aiohttp.ClientSession") as mock_session:
-        mock_session.return_value.__aenter__.return_value.get.return_value.__aenter__.return_value = (
-            mock_response
-        )
+        mock_session.return_value.__aenter__.return_value.get.return_value.__aenter__.return_value = mock_response
 
         result = await client.async_get_models()
 

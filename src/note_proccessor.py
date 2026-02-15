@@ -28,14 +28,8 @@ from anki.decks import DeckId
 from anki.notes import Note, NoteId
 from aqt import mw
 
-from .app_state import (
-    app_state,
-    has_api_key,
-    is_capacity_remaining,
-    is_capacity_remaining_or_legacy,
-)
 from .config import Config, bump_usage_counter
-from .constants import GENERIC_CREDITS_MESSAGE, STANDARD_BATCH_LIMIT
+from .constants import STANDARD_BATCH_LIMIT
 from .dag import generate_fields_dag
 from .field_processor import FieldProcessor
 from .logger import logger
@@ -45,10 +39,6 @@ from .prompts import get_prompts_for_note
 from .sentry import run_async_in_background_with_sentry
 from .ui.ui_utils import show_message_box
 from .utils import run_on_main
-
-# OPEN_AI rate limits
-NEW_OPEN_AI_MODEL_REQ_PER_MIN = 500
-OLD_OPEN_AI_MODEL_REQ_PER_MIN = 3500
 
 
 class NoteProcessor:
@@ -82,9 +72,6 @@ class NoteProcessor:
 
         logger.debug("Processing notes...")
 
-        if not is_capacity_remaining_or_legacy(show_box=False):
-            return
-
         def wrapped_on_success(res: tuple[list[Note], list[Note], list[Note]]) -> None:
             updated, failed, skipped = res
             if not mw or not mw.col:
@@ -98,16 +85,8 @@ class NoteProcessor:
             self._reqlinquish_req_in_process()
             show_message_box(f"Error: {e}")
 
-        # TODO: this logic should be re-addressed when I revisit batch limits (ANK-28)
-        if is_capacity_remaining():
-            limit = STANDARD_BATCH_LIMIT
-        else:
-            model = self.config.chat_model
-            limit = (
-                OLD_OPEN_AI_MODEL_REQ_PER_MIN
-                if model == "gpt-4o-mini"
-                else NEW_OPEN_AI_MODEL_REQ_PER_MIN
-            )
+        # Use standard batch limit for all users
+        limit = STANDARD_BATCH_LIMIT
         logger.debug(f"Rate limit: {limit}")
 
         # Only show fancy progress meter for large batches
@@ -162,12 +141,12 @@ class NoteProcessor:
 
                 # Update the notes in the main thread
                 run_on_main(
-                    lambda updated=updated,
-                    to_process_ids_empty=len(to_process_ids) == 0,
-                    processed_count=processed_count: on_update(
-                        updated,
-                        processed_count,
-                        to_process_ids_empty,
+                    lambda updated=updated, to_process_ids_empty=len(to_process_ids) == 0, processed_count=processed_count: (
+                        on_update(
+                            updated,
+                            processed_count,
+                            to_process_ids_empty,
+                        )
                     )
                 )
 
@@ -387,32 +366,16 @@ class NoteProcessor:
             logger.debug(f"Got status: {status}")
             unknown_error = f"Smart Notes Error: Unknown error: {e}"
 
-            # First time we see a 4xx error, update subscription state
-            if is_capacity_remaining():
-                logger.debug(f"Got API error: {e}")
-                if status >= 400 and status < 500:
-                    logger.debug(
-                        "Saw 4xx error, something wrong with some subscription"
-                    )
-                    app_state.update_subscription_state()
-                    return
-                else:
-                    logger.error(f"Got 500 error: {e}")
-                    show_message_box(unknown_error)
-            elif has_api_key():
+            # Check if user has API key for error handling
+            if status >= 400 and status < 500:
+                logger.debug(f"Got 4xx error: {e}")
                 if status in openai_failure_map:
                     show_message_box(openai_failure_map[status])
                 else:
                     show_message_box(unknown_error)
             else:
-                if status == 402:
-                    # Shouldn't get here; requests should be blocked if you're
-                    # out of credits.
-                    logger.debug("Got 402 error but app is locked & no API key")
-                    show_message_box(GENERIC_CREDITS_MESSAGE)
-                else:
-                    logger.error("Got 4xx error but app is locked & no API key")
-                    show_message_box(unknown_error)
+                logger.error(f"Got error: {e}")
+                show_message_box(unknown_error)
         else:
             logger.error(f"Got non-HTTP error: {e}")
             show_message_box(f"Smart Notes Error: Unknown error: {e}")
@@ -437,7 +400,7 @@ class NoteProcessor:
         self.req_in_progress = False
 
     def _assert_valid_app_mode(self) -> bool:
-        return is_capacity_remaining() or has_api_key()
+        return True
 
     async def _process_node(
         self, node: FieldNode, note: Note, show_error_message_box: bool

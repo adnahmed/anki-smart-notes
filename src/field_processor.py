@@ -23,10 +23,8 @@ from anki.decks import DeckId
 from anki.notes import Note
 from aqt import mw
 
-from .app_state import has_api_key, is_capacity_remaining
 from .chat_provider import ChatProvider, chat_provider
 from .config import key_or_config_val
-from .constants import GENERIC_CREDITS_MESSAGE
 from .image_provider import ImageProvider, image_provider
 from .logger import logger
 from .markdown import convert_markdown_to_html
@@ -48,8 +46,6 @@ from .notes import get_chained_ai_fields, get_note_type
 from .open_ai_client import OpenAIClient, openai_provider
 from .prompts import get_extras, interpolate_prompt
 from .tts_provider import TTSProvider, tts_provider
-from .ui.ui_utils import show_message_box
-from .utils import run_on_main
 
 
 class FieldProcessor:
@@ -83,10 +79,6 @@ class FieldProcessor:
         )
 
         if field_type == "tts":
-            if not is_capacity_remaining():
-                logger.debug("Skipping TTS field for locked app")
-                return None
-
             if not mw or not mw.col:
                 return None
             media = mw.col.media
@@ -184,7 +176,9 @@ class FieldProcessor:
 
         resp: Optional[str] = None
 
-        if is_capacity_remaining():
+        # Try to get chat response based on provider and available credentials
+        if provider == "ollama":
+            # Ollama provider is handled locally
             resp = await self.chat_provider.async_get_chat_response(
                 interpolated_prompt,
                 model=model,
@@ -192,8 +186,8 @@ class FieldProcessor:
                 temperature=temperature,
                 note_id=note.id,
             )
-        elif has_api_key():
-            logger.debug("On legacy path....")
+        else:
+            logger.debug(f"Using legacy path for provider: {provider}")
             # Check that this isn't a chained smart field
             chained_fields = get_chained_ai_fields(
                 note_type=get_note_type(note), deck_id=deck_id
@@ -203,14 +197,10 @@ class FieldProcessor:
                 logger.debug(f"Skipping chained field: ${field_lower}")
                 return None
 
+            # Use OpenAI provider for all non-Ollama providers
             resp = await self.openai_provider.async_get_chat_response(
                 interpolated_prompt, temperature=temperature, retry_count=0
             )
-        else:
-            logger.error("App is at capacity + no API key")
-            if show_error_box:
-                run_on_main(lambda: show_message_box(GENERIC_CREDITS_MESSAGE))
-            return None
 
         if resp and should_convert_to_html:
             resp = convert_markdown_to_html(resp)
@@ -234,12 +224,6 @@ class FieldProcessor:
 
         logger.debug(f"Resolving: {interpolated_prompt}")
 
-        if not is_capacity_remaining():
-            logger.debug("App at capacity, returning early")
-            if show_error_box:
-                run_on_main(lambda: show_message_box(GENERIC_CREDITS_MESSAGE))
-            return None
-
         return await self.tts_provider.async_get_tts_response(
             input=interpolated_prompt,
             model=model,
@@ -257,12 +241,6 @@ class FieldProcessor:
         provider: ImageProviders,
         show_error_box: bool = True,
     ) -> Optional[bytes]:
-        if not is_capacity_remaining():
-            logger.debug("App at capacity, returning early")
-            if show_error_box:
-                run_on_main(lambda: show_message_box(GENERIC_CREDITS_MESSAGE))
-            return None
-
         interpolated_prompt = interpolate_prompt(input_text, note)
 
         if not interpolated_prompt:

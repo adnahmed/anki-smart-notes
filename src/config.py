@@ -34,8 +34,8 @@ from .models import (
     ImageModels,
     ImageProviders,
     NoteTypeMap,
-    OpenAIModels,
     OllamaModels,
+    OpenAIModels,
     PromptMap,
     TTSModels,
     TTSProviders,
@@ -52,13 +52,11 @@ class Config:
     generate_at_review: bool
     times_used: int
     last_seen_version: Optional[str]
-    uuid: str
     openai_endpoint: Optional[str]
     regenerate_notes_when_batching: bool
     allow_empty_fields: bool
     last_message_id: int
     debug: bool
-    auth_token: Optional[str]
     legacy_support: Optional[bool]
 
     # Chat
@@ -82,15 +80,10 @@ class Config:
     image_model: ImageModels
 
     # Dialogs / Migrations
-    did_show_chained_error_dialog: bool
     did_show_rate_dialog: bool
-    did_show_premium_tts_dialog: bool
     did_deck_filter_migration: bool
     did_cleanup_config_defaults: bool
     did_click_rate_link: bool
-
-    # Capacity alerts
-    did_show_capacity_threshold_this_cycle: bool
 
     # Deprecated fields:
     legacy_openai_model: OpenAIModels
@@ -151,7 +144,7 @@ class Config:
         self._backup_config()
 
         logger.debug("Migration: prompts map migration for per-deck prompts")
-        old_prompts_map: OldPromptsMap = cast(OldPromptsMap, self.prompts_map)
+        old_prompts_map: OldPromptsMap = cast("OldPromptsMap", self.prompts_map)
         new_prompts_map: PromptMap = {"note_types": {}}
 
         for note_type, fields_and_extras in old_prompts_map["note_types"].items():
@@ -228,7 +221,7 @@ M = TypeVar("M", bound=Mapping[str, object])
 # TODO: make this use the none_defaulting (too much type golf for now tho)
 def key_or_config_val(vals: Optional[M], k: str) -> T:  # type: ignore
     return (
-        cast(T, vals[k])
+        cast("T", vals[k])
         if (vals and vals.get(k) is not None)
-        else cast(T, config.__getattr__(k))
+        else cast("T", config.__getattr__(k))
     )

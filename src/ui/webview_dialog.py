@@ -36,7 +36,6 @@ from aqt import (
 )
 from PyQt6.QtNetwork import QNetworkCookie
 
-from ..app_state import app_state
 from ..config import config
 from ..constants import get_site_url
 from ..logger import logger
@@ -147,9 +146,7 @@ class WebviewDialog(QDialog):
         if value:
             logger.debug("Got JWT! Adding to config")
             config.auth_token = value
-            app_state.update_subscription_state()
 
     def closeEvent(self, a0: Any) -> None:
-        logger.debug("Webview dialog closed, updating subscription state")
-        app_state.update_subscription_state()
+        logger.debug("Webview dialog closed")
         super().closeEvent(a0)

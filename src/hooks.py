@@ -32,11 +32,9 @@ from aqt import QAction, QMenu, browser, editor, gui_hooks, mw
 from aqt.addcards import AddCards
 from aqt.browser.sidebar.item import SidebarItemType
 
-from .app_state import app_state, is_capacity_remaining_or_legacy
 from .config import bump_usage_counter, config
 from .decks import deck_id_to_name_map
 from .logger import logger, setup_logger
-from .message_polling import start_polling_for_messages
 from .migrations import migrate_models
 from .note_proccessor import NoteProcessor
 from .notes import get_field_from_index, is_ai_field, is_card_fully_processed
@@ -66,7 +64,6 @@ def with_processor(fn: Any):
 
 @with_processor  # type: ignore
 def on_options(processor: NoteProcessor):
-    app_state.update_subscription_state()
     dialog = AddonOptionsDialog(processor)
     dialog.exec()
 
@@ -78,9 +75,6 @@ def add_editor_top_button(
     @with_sentry
     def fn(editor: editor.Editor):
         if not mw:
-            return
-
-        if not is_capacity_remaining_or_legacy(show_box=True):
             return
 
         card = editor.card
@@ -217,9 +211,6 @@ def on_browser_context(processor: NoteProcessor, browser: browser.Browser, menu:
     cards = browser.selected_cards()
 
     def wrapped():
-        if not is_capacity_remaining_or_legacy(show_box=True):
-            return
-
         if not prevent_batches_on_free_trial(cards):
             return
 
@@ -239,9 +230,7 @@ def on_start_actions() -> None:
 
     run_async_in_background(pinger("session_start"), use_collection=False)
     perform_update_check()
-    start_polling_for_messages()
 
-    app_state.update_subscription_state()
     if sentry:
         sentry.configure_scope()
 
@@ -328,8 +317,6 @@ def on_editor_context(
 @with_processor  # type: ignore
 def on_review(processor: NoteProcessor, card: Card):
     logger.debug("Reviewing...")
-    if not is_capacity_remaining_or_legacy(show_box=False):
-        return
 
     if not config.generate_at_review:
         return
@@ -384,8 +371,6 @@ def add_deck_option(
     menu.addAction(item)
 
     def wrapped():
-        if not is_capacity_remaining_or_legacy(show_box=True):
-            return
         if not prevent_batches_on_free_trial(cards):
             return
 
@@ -415,12 +400,6 @@ def cleanup() -> None:
 
 
 def prevent_batches_on_free_trial(notes: Any) -> bool:
-    if app_state.is_free_trial() and len(notes) > 50:
-        did_accept: bool = show_message_box(
-            "Warning: your free trial allows a limited number of cards. Continue?",
-            show_cancel=True,
-        )
-        return did_accept
     return True
 
 

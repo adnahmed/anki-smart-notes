@@ -62,8 +62,6 @@ class MockConfig:
     tts_voice = "alloy"
     tts_model = "tts-1"
     openai_api_key = ""
-    auth_token: str = ""
-    uuid: str = "test-uuid-12345"
     debug: bool = True
 
 
@@ -87,27 +85,6 @@ class MockChatClient:
         retry_count: int = 0,
     ) -> str:
         return p(prompt)
-
-
-class MockAppState:
-    """Mock app state that simulates an unlocked app with unlimited capacity"""
-
-    state = {
-        "subscription": "PAID_PLAN_ACTIVE",  # Unlocked state
-        "plan": {
-            "planId": "test_plan",
-            "planName": "Test Plan",
-            "notesUsed": 0,
-            "notesLimit": 1000,
-            "daysLeft": 30,
-            "textCreditsUsed": 0,
-            "textCreditsCapacity": 1000,
-            "voiceCreditsUsed": 0,
-            "voiceCreditsCapacity": 1000,
-            "imageCreditsUsed": 0,
-            "imageCreditsCapacity": 1000,
-        },
-    }
 
 
 NOTE_TYPE_NAME = "note_type_1"
@@ -168,11 +145,7 @@ def setup_data(monkeypatch, note, prompts_map, options, allow_empty_fields):
         lambda _: note.fields(),  # type: ignore
     )
 
-    # Replace config and app_state with mocks - cleaner than patching individual functions
-    mock_app_state = MockAppState()
-    monkeypatch.setattr(src.app_state, "config", c)
-    monkeypatch.setattr(src.app_state, "app_state", mock_app_state)
-
+    # Replace config with mock - cleaner than patching individual functions
     monkeypatch.setattr(src.prompts, "config", c)
     monkeypatch.setattr(
         src.prompts,
@@ -184,11 +157,9 @@ def setup_data(monkeypatch, note, prompts_map, options, allow_empty_fields):
     monkeypatch.setattr(
         src.prompts,
         "get_extras",
-        lambda note_type,
-        field,
-        deck_id,
-        prompts=None,
-        fallback_to_global_deck=True: extras.get(field, {"automatic": True}),
+        lambda note_type, field, deck_id, prompts=None, fallback_to_global_deck=True: (
+            extras.get(field, {"automatic": True})
+        ),
     )
 
     return p

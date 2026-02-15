@@ -44,16 +44,14 @@ from aqt import (
 )
 from PyQt6.QtCore import Qt
 
-from ..app_state import AppState, app_state, is_capacity_remaining
 from ..config import config
-from ..constants import GLOBAL_DECK_ID, UNPAID_PROVIDER_ERROR
+from ..constants import GLOBAL_DECK_ID
 from ..decks import deck_id_to_name_map, deck_name_to_id_map
 from ..logger import logger
 from ..models import PromptMap, SmartFieldType, legacy_openai_chat_models
 from ..note_proccessor import NoteProcessor
 from ..prompts import get_all_prompts, get_extras, get_prompts_for_note, remove_prompt
 from ..utils import get_fields, get_version
-from .account_options import AccountOptions
 from .chat_options import ChatOptions
 from .image_options import ImageOptions
 from .prompt_dialog import PromptDialog
@@ -61,7 +59,6 @@ from .reactive_check_box import ReactiveCheckBox
 from .reactive_combo_box import ReactiveComboBox
 from .reactive_line_edit import ReactiveLineEdit
 from .state_manager import StateManager
-from .subscription_box import SubscriptionBox
 from .tts_options import TTSOptions
 from .ui_utils import default_form_layout, font_large, font_small, show_message_box
 
@@ -102,7 +99,6 @@ class AddonOptionsDialog(QDialog):
         self.processor = processor
         self.state = StateManager[State](self.make_initial_state())
         self.setup_ui()
-        app_state.bind(self)
 
     def setup_ui(self) -> None:
         self.setWindowTitle("Smart Notes ✨")
@@ -165,10 +161,6 @@ class AddonOptionsDialog(QDialog):
         explanation.setFont(font_small)
         layout = QVBoxLayout()
 
-        subscription_box = SubscriptionBox()
-
-        layout.addWidget(subscription_box)
-        layout.addSpacing(24)
         layout.addWidget(QLabel("<h3>✨ Smart Fields</h3>"))
         layout.addWidget(explanation)
         layout.addSpacing(16)
@@ -434,7 +426,12 @@ class AddonOptionsDialog(QDialog):
         return plugin_settings_tab
 
     def render_account_tab(self) -> QWidget:
-        return AccountOptions()
+        widget = QWidget()
+        layout = QVBoxLayout()
+        widget.setLayout(layout)
+        layout.addWidget(QLabel("No account settings required."))
+        layout.addStretch()
+        return widget
 
     def render_chat_tab(self) -> QWidget:
         container = QWidget()
@@ -628,10 +625,10 @@ class AddonOptionsDialog(QDialog):
             self.render_table()
 
     # When appstate updates
-    def update_from_state(self, _: AppState) -> None:
-        is_unlocked = is_capacity_remaining()
-        self.voice_button.setEnabled(is_unlocked)
-        self.tts_tab.setEnabled(is_unlocked)
+    def update_from_state(self, _: Any) -> None:
+        # All features are now enabled for all users
+        self.voice_button.setEnabled(True)
+        self.tts_tab.setEnabled(True)
 
     def on_remove(self):
         row = self.state.s["selected_row"]
@@ -680,17 +677,10 @@ class AddonOptionsDialog(QDialog):
             if not did_click_ok:
                 return False
 
-        is_unlocked = is_capacity_remaining()
-
-        if not is_unlocked and self.chat_options.state.s["chat_provider"] != "openai":
-            show_message_box(UNPAID_PROVIDER_ERROR)
-            return False
-
-        valid_config_attrs = config.__annotations__.keys()
-
         old_debug = config.debug
 
         # Automatically inspect all the substates for valid config and write them out
+        valid_config_attrs = config.__annotations__.keys()
         states: list[StateManager[Any]] = [
             self.state,
             self.tts_options.state,
