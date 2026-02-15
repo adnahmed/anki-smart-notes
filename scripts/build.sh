@@ -19,6 +19,12 @@ set -e
 # along with Smart Notes.  If not, see <https://www.gnu.org/licenses/>.
 
 
+install () {
+  echo "Installing runtime dependencies to vendor directory..."
+  rm -rf vendor
+  pip install -r requirements-runtime.txt -t vendor
+  echo "Dependencies installed to vendor/"
+}
 
 build () {
   echo "Building..."
@@ -36,26 +42,14 @@ build () {
   # Nuke any pycache
   rm -rf dist/__pycache__
 
-  # Copy deps
-  vendored=(
-    "aiohttp"
-    "aiosignal"
-    "async_timeout"
-    "frozenlist"
-    "attrs"
-    "multidict"
-    "yarl"
-    "idna"
-    "sentry_sdk"
-    "certifi"
-    "urllib3"
-    "dotenv"
-  )
+  # Ensure vendor directory exists
+  if [ ! -d "vendor" ]; then
+    echo "Vendor directory not found. Running install..."
+    install
+  fi
 
-  # copy them in a loop
-  for dep in "${vendored[@]}"; do
-    cp -r ".venv/lib/python3.11/site-packages/$dep" dist/vendor/
-  done
+  # Copy vendor directory
+  cp -r vendor dist/
 
   # Voices
   cp -r eleven_voices.json dist/
@@ -171,7 +165,9 @@ version () {
 }
 
 
-if [ "$1" == "build" ]; then
+if [ "$1" == "install" ]; then
+  install
+elif [ "$1" == "build" ]; then
   clean
   build
 elif [ "$1" == "clean" ]; then
@@ -198,7 +194,7 @@ elif [ "$1" == "fix" ]; then
   fix
 else
   echo "Invalid argument: $1"
-  echo "Available commands: build, clean, win, test-dev, test-build, sentry-release, version, format, lint, typecheck, check, fix"
+  echo "Available commands: install, build, clean, win, test-dev, test-build, sentry-release, version, format, lint, typecheck, check, fix"
   exit 1
 fi
 

@@ -25,19 +25,10 @@ def init_addon():
         import os
         import sys
 
-        from .src.env import environment
-
-        # Local and prod builds have different package directories
-        # Can't use `is_production` b/c utils requires dotenv to load, and this has to run before we import an deps
-        relative_packages_dir = (
-            "vendor" if environment == "PROD" else ".venv/lib/python3.11/site-packages"
-        )
-
-        packages_dir = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), relative_packages_dir
-        )
-
-        sys.path.append(packages_dir)
+        # Add vendor directory to path for all runtime dependencies
+        # Dependencies are vendored using: pip install -r requirements-runtime.txt -t vendor
+        vendor_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "vendor")
+        sys.path.insert(0, vendor_dir)
 
     update_path()
 
