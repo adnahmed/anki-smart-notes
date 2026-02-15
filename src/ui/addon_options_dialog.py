@@ -23,7 +23,6 @@ from urllib.parse import urlparse
 from aqt import (
     QAction,
     QApplication,
-    QDesktopServices,
     QDialog,
     QDialogButtonBox,
     QGraphicsOpacityEffect,
@@ -33,12 +32,12 @@ from aqt import (
     QMenu,
     QPoint,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpacerItem,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QUrl,
     QVBoxLayout,
     QWidget,
 )
@@ -62,7 +61,7 @@ from .state_manager import StateManager
 from .tts_options import TTSOptions
 from .ui_utils import default_form_layout, font_large, font_small, show_message_box
 
-OPTIONS_MIN_WIDTH = 875
+OPTIONS_MIN_WIDTH = 700
 TTS_PROMPT_STUB_VALUE = "🔈"
 
 
@@ -180,28 +179,6 @@ class AddonOptionsDialog(QDialog):
         tabs.addTab(self.render_account_tab(), "Account")
 
         tab_layout = QVBoxLayout()
-
-        if not config.did_click_rate_link:
-            rate_box = QWidget()
-            rate_layout = QHBoxLayout()
-            rate_box.setLayout(rate_layout)
-            rate_label = QLabel(
-                'Enjoying Smart Notes? Please consider <a href="https://ankiweb.net/shared/info/1531888719">leaving a review.</a>'
-            )
-            rate_label.setContentsMargins(0, 12, 0, 18)
-            rate_font = rate_label.font()
-            rate_font.setItalic(True)
-            rate_label.setFont(rate_font)
-            rate_layout.addStretch()
-            rate_layout.addWidget(rate_label)
-            rate_layout.addStretch()
-
-            def on_rate_click(url: str):
-                QDesktopServices.openUrl(QUrl(url))
-                config.did_click_rate_link = True
-
-            rate_label.linkActivated.connect(on_rate_click)
-            tab_layout.addWidget(rate_box)
         tab_layout.addWidget(tabs)
 
         # Version Box
@@ -423,7 +400,10 @@ class AddonOptionsDialog(QDialog):
         plugin_settings_tab = QWidget()
         plugin_settings_tab.setLayout(plugin_tab_layout)
 
-        return plugin_settings_tab
+        scroll = QScrollArea()
+        scroll.setWidget(plugin_settings_tab)
+        scroll.setWidgetResizable(True)
+        return scroll
 
     def render_account_tab(self) -> QWidget:
         widget = QWidget()
@@ -431,7 +411,11 @@ class AddonOptionsDialog(QDialog):
         widget.setLayout(layout)
         layout.addWidget(QLabel("No account settings required."))
         layout.addStretch()
-        return widget
+
+        scroll = QScrollArea()
+        scroll.setWidget(widget)
+        scroll.setWidgetResizable(True)
+        return scroll
 
     def render_chat_tab(self) -> QWidget:
         container = QWidget()
@@ -452,42 +436,12 @@ class AddonOptionsDialog(QDialog):
             QSpacerItem(0, 24, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         )
         layout.addWidget(self.chat_options)
+        layout.addStretch()
 
-        # Add Ollama settings section
-        layout.addItem(
-            QSpacerItem(0, 24, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        )
-        ollama_box = QGroupBox("🦙 Ollama (Local Models)")
-        ollama_form = default_form_layout()
-        ollama_box.setLayout(ollama_form)
-
-        self.ollama_endpoint_edit = ReactiveLineEdit(self.state, "ollama_endpoint")
-        self.ollama_endpoint_edit.setPlaceholderText("http://localhost:11434")
-        self.ollama_endpoint_edit.setMinimumWidth(400)
-        self.ollama_endpoint_edit.on_change.connect(
-            lambda text: self.state.update({"ollama_endpoint": text})
-        )
-        self.ollama_endpoint_edit.on_change.connect(
-            lambda _: self.chat_options.refresh_ollama_models()
-        )
-
-        ollama_form.addRow("Ollama Endpoint:", self.ollama_endpoint_edit)
-        ollama_info = QLabel(
-            "Configure the endpoint for your local Ollama instance. Make sure Ollama is running before using local models."
-        )
-        ollama_info.setFont(font_small)
-        ollama_form.addRow(ollama_info)
-
-        ollama_help = QLabel(
-            '<a href="https://ollama.com">Install Ollama</a> to use free, open-source models locally without subscription costs.'
-        )
-        ollama_help.setOpenExternalLinks(True)
-        ollama_help.setFont(font_small)
-        ollama_form.addRow(ollama_help)
-
-        layout.addWidget(ollama_box)
-
-        return container
+        scroll = QScrollArea()
+        scroll.setWidget(container)
+        scroll.setWidgetResizable(True)
+        return scroll
 
     def render_tts_tab(self) -> QWidget:
         container = QWidget()
@@ -507,7 +461,12 @@ class AddonOptionsDialog(QDialog):
             QSpacerItem(0, 24, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         )
         layout.addWidget(self.tts_options)
-        return container
+        layout.addStretch()
+
+        scroll = QScrollArea()
+        scroll.setWidget(container)
+        scroll.setWidgetResizable(True)
+        return scroll
 
     def render_images_tab(self) -> QWidget:
         container = QWidget()
@@ -530,7 +489,11 @@ class AddonOptionsDialog(QDialog):
         layout.addItem(
             QSpacerItem(0, 24, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         )
-        return container
+
+        scroll = QScrollArea()
+        scroll.setWidget(container)
+        scroll.setWidgetResizable(True)
+        return scroll
 
     def create_table(self) -> QTableWidget:
         table = QTableWidget(0, 5)

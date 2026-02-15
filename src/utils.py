@@ -48,9 +48,6 @@ def get_fields(note_type: str) -> list[str]:
     return [field["name"] for field in sorted(model["flds"], key=lambda x: x["ord"])]
 
 
-USES_BEFORE_RATE_DIALOG = 20
-
-
 def get_file_path(file: str) -> str:
     path = mw.pm.addonFolder()  # type: ignore
     module = __name__.split(".")[0]

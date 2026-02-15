@@ -40,8 +40,7 @@ from .models import (
     TTSModels,
     TTSProviders,
 )
-from .ui.rate_dialog import RateDialog
-from .utils import USES_BEFORE_RATE_DIALOG, get_file_path
+from .utils import get_file_path
 
 
 class Config:
@@ -207,10 +206,6 @@ config = Config()
 
 def bump_usage_counter() -> None:
     config.times_used += 1
-    if config.times_used > USES_BEFORE_RATE_DIALOG and not config.did_show_rate_dialog:
-        config.did_show_rate_dialog = True
-        dialog = RateDialog()
-        dialog.exec()
 
 
 T = TypeVar("T")

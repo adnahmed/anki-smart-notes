@@ -26,7 +26,6 @@ from ..logger import logger
 from ..sentry import pinger
 from ..tasks import run_async_in_background
 from ..utils import get_version, load_file
-from .webview_dialog import WebviewDialog
 
 
 def parse_changelog() -> list[tuple[str, list[str]]]:
@@ -88,10 +87,8 @@ def perform_update_check() -> None:
 
         # FIRST RUN
         if not prior_version:
-            trial_cta = WebviewDialog(mw, "/trial")
-            trial_cta.show()
             run_async_in_background(
-                pinger("show_first_start_cta"), use_collection=False
+                pinger("first_start"), use_collection=False
             )
             return
 

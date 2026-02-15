@@ -211,9 +211,6 @@ def on_browser_context(processor: NoteProcessor, browser: browser.Browser, menu:
     cards = browser.selected_cards()
 
     def wrapped():
-        if not prevent_batches_on_free_trial(cards):
-            return
-
         processor.process_cards_with_progress(
             cards,
             on_success=make_on_batch_success(browser),
@@ -371,9 +368,6 @@ def add_deck_option(
     menu.addAction(item)
 
     def wrapped():
-        if not prevent_batches_on_free_trial(cards):
-            return
-
         processor.process_cards_with_progress(
             cards,
             on_success=make_on_batch_success(tree_view.browser),
@@ -397,10 +391,6 @@ def cleanup() -> None:
     sentry_logger = logging.getLogger("sentry_sdk.errors")
     sentry_logger.handlers.clear()
     logger.handlers.clear()
-
-
-def prevent_batches_on_free_trial(notes: Any) -> bool:
-    return True
 
 
 @with_sentry
