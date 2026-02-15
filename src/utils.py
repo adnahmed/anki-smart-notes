@@ -87,7 +87,7 @@ def is_production() -> bool:
 
 def get_version() -> str:
     manifest = load_file("manifest.json")
-    return json.loads(manifest)["human_version"]  # type: ignore
+    return json.loads(manifest)["version"]  # type: ignore
 
 
 def make_uuid() -> str:
